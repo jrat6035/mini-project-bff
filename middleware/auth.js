@@ -44,7 +44,6 @@ function confirmSignUp(username, code) {
 }
 
 function signIn(username, password) {
-  console.log(username);
   return new Promise((resolve, reject) => {
     const authenticationDetails = new AuthenticationDetails({
       Username: username,

@@ -5,10 +5,25 @@ const {
   confirmSignUp,
   signIn,
   getCurrentUser,
-  getSession,
   signOut,
 } = require("./middleware/auth");
-const { default: axios } = require("axios");
+const {
+  createProduct,
+  getProductById,
+  updateProductById,
+  getProducts,
+  removeProductById,
+} = require("./middleware/product");
+const {
+  localSignUp,
+  getUserByEmail,
+} = require("./middleware/user");
+const {
+  getOrders,
+  approveOrder,
+  placeOrder,
+  getOrdersByUserEmail,
+} = require("./middleware/order");
 
 const app = express();
 app.use(cors());
@@ -19,186 +34,224 @@ app.listen(port, () => {
   console.log(`BFF server is running on port ${port}`);
 });
 
-app.post("/api/v1/sign-up", async (req, res) => {
+app.post("/api/v1/signup", async (req, res) => {
   try {
-    const { fullname, username, email, password } = req.body;
+    const { fullname, username, email, password, userType } = req.body;
     const cognitoUser = await signUp(username, email, password);
-    // const dataBaseUser = await createUser(fullname, username, email, password);
 
-    res.json({ success: true, user: cognitoUser });
-  } catch (err) {
-    res.json({ success: false, error: err.message });
+    const user = {
+      userFullName: fullname,
+      userEmail: email,
+      userType: userType,
+    };
+
+    const localUser = localSignUp(user);
+    res.json({
+      success: true,
+      message: "User signed up successfully",
+      cognitoUser: cognitoUser,
+      localUser: localUser,
+    });
+  } catch (error) {
+    res.json({ success: false, error: error.message });
+  }
+});
+
+app.post("/api/v1/signin", async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    const cognitoUser = await signIn(username, password);
+
+    res.json({
+      success: true,
+      message: "User signed in successfully",
+      cognitoUser: cognitoUser,
+    });
+  } catch (error) {
+    res.json({ success: false, error: error.message });
+  }
+});
+
+app.post("/api/v1/signout", async (req, res) => {
+  try {
+    signOut();
+    res.json({ success: true, message: "User signed out successfully" });
+  } catch (error) {
+    res.json({ success: false, error: error.message });
   }
 });
 
 app.post("/api/v1/confirm-signup", async (req, res) => {
   try {
     const { username, code } = req.body;
-
     const result = await confirmSignUp(username, code);
 
     res.json({ success: true, message: "User confirmed successfully", result });
-  } catch (err) {
-    res.json({ success: false, error: err.message });
+  } catch (error) {
+    res.json({ success: false, error: error.message });
   }
 });
 
-app.post("/api/v1/signin", async (req, res) => {
-  console.log("Signed in");
-  try {
-    const { username, password } = req.body;
-    const cognitoUser = await signIn(username, password);
-    res.json({
-      success: true,
-      message: "User confirmed successfully",
-      cognitoUser,
-    });
-  } catch (err) {
-    res.json({ success: false, error: err.message });
-  }
-});
-
-app.post("/api/v1/current-user", async (req, res) => {
+app.get("/api/v1/current-user", async (req, res) => {
   try {
     const cognitoUser = await getCurrentUser();
-    console.log(JSON.stringify(cognitoUser));
     res.json({
       success: true,
       message: "User confirmed successfully",
       cognitoUser,
     });
-  } catch (err) {
-    res.json({ success: false, error: err.message });
+  } catch (error) {
+    res.json({ success: false, error: error.message });
   }
 });
 
-app.post("/api/v1/current-session", async (req, res) => {
+app.get("/api/v1/get-user/:userEmail", async (req, res) => {
   try {
-    const cognitoUser = await getSession();
-    res.json({
-      success: true,
-      message: "User confirmed successfully",
-      cognitoUser,
-    });
-  } catch (err) {
-    res.json({ success: false, error: err.message });
+    const userEmail = req.params.userEmail;
+    const user = await getUserByEmail(userEmail);
+    res.json(user);
+  } catch (error) {
+    res.json({ success: false, error: error.message });
   }
 });
 
-app.post("/api/v1/signout", async (req, res) => {
+// Product
+
+app.post("/api/v1/create-product", async (req, res) => {
   try {
-    const cognitoUser = await signOut();
-    res.json({
-      success: true,
-      message: "User confirmed successfully",
-      cognitoUser,
-    });
-  } catch (err) {
-    res.json({ success: false, error: err.message });
-  }
-});
+    const { name, description, price, quantity } = req.body;
+    const product = {
+      productName: name,
+      productDescription: description,
+      productPrice: price,
+      productQuantity: quantity,
+    };
 
-
-function createProducts(name, description, price, quantity) {
-  const product = {
-    productName: name,
-    productDescription: description,
-    productPrice: price,
-    productQuantity: quantity,
-  };
-  console.log(product);
-  return axios
-    .post("http://localhost:8080/api/v1/products", product)
-    .then((response) => {
-      return response.data;
-    })
-    .catch((error) => {
-      console.error("Error in Creating Product: ", error);
-      throw error;
-    });
-}
-
-app.post("/api/create-product", async (req, res) => {
-  try {
-    const { name, description, price, quantity } = req.body; 
-    console.log(req.body);
-
-    const response = await createProducts(name, description, price, quantity);
+    const response = await createProduct(product);
 
     if (response.success) {
-      res.status(200).json(response.result);
+      res.json({
+        success: true,
+        message: "Product created successfully",
+        product: product,
+      });
     } else {
-      res.status(500).json({ error: response.error });
+      res.json({ success: false, error: "Creating product failed" });
     }
   } catch (error) {
-    console.error("Error:", error.message);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.json({ success: false, error: error.message });
   }
 });
 
-app.post("/api/get-products", async (req, res) => {
+app.get("/api/v1/get-products", async (req, res) => {
   try {
-    const response = await getProducts();
-
-    res.status(200).json(response);
+    const products = await getProducts();
+    res.json(products);
   } catch (error) {
-    console.error("Error:", error.message);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.json({ success: false, error: error.message });
   }
 });
 
-function getProducts() {
-  console.log("ok");
-  return axios
-    .get("http://localhost:8080/api/v1/products")
-    .then((response) => {
-      return response.data;
-    })
-    .catch((error) => {
-      console.error("Error in Reyriving Products: ", error);
-      throw error;
-    });
-}
-
-app.post("/api/get-product", async (req, res) => {
-  console.log("done");
+app.get("/api/v1/get-product/:productId", async (req, res) => {
   try {
-    const productId = req.body;
-    console.log(req.body);
+    const productId = req.params.productId;
+    const product = await getProductById(productId);
+    res.json(product);
   } catch (error) {
-    console.error("Error:", error.message);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.json({ success: false, error: error.message });
   }
 });
 
-function getProduct(productId) {
-  return axios
-    .get(`http://localhost:8080/api/v1/products/${productId}`)
-    .then((response) => {
-      return response.data;
-    })
-    .catch((error) => {
-      console.error("Error in Reyriving Product: ", error);
-      throw error;
-    });
-}
+app.put("/api/v1/update-product/:productId", async (req, res) => {
+  try {
+    const productId = req.params.productId;
+    const { name, description, price, quantity } = req.body;
+    const product = {
+      productName: name,
+      productDescription: description,
+      productPrice: price,
+      productQuantity: quantity,
+    };
 
+    const response = await updateProductById(productId, product);
 
+    if (response.success) {
+      res.json({
+        success: true,
+        message: "Product updated successfully",
+        product: product,
+      });
+    } else {
+      res.json({ success: false, error: "Updating product failed" });
+    }
+  } catch (error) {
+    res.json({ success: false, error: error.message });
+  }
+});
 
+app.delete("/api/v1/delete-product/:productId", async (req, res) => {
+  try {
+    const productId = req.params.productId;
+    const product = await removeProductById(productId);
+    res.json(product);
+  } catch (error) {
+    res.json({ success: false, error: error.message });
+  }
+});
 
+// Order
 
+app.get("/api/v1/get-orders", async (req, res) => {
+  try {
+    const orders = await getOrders();
+    res.json(orders);
+  } catch (error) {
+    res.json({ success: false, error: error.message });
+  }
+});
 
+app.get("/api/v1/get-orders/:userEmail", async (req, res) => {
+  try {
+    const userEmail = req.params.userEmail;
+    const orders = await getOrdersByUserEmail(userEmail);
+    res.json(orders);
+  } catch (error) {
+    res.json({ success: false, error: error.message });
+  }
+});
 
+app.post("/api/v1/place-order", async (req, res) => {
+  try {
+    const { userEmail, productId, productQuantity, description } = req.body;
+    const order = {
+      userEmail: userEmail,
+      productId: productId,
+      productQuantity: productQuantity,
+      description: description,
+    };
 
+    const response = await placeOrder(order);
 
-// app.post("/api/create-product", async (req, res) => {
-//   try {
-//     console.log("Done");
-//     const { product } = req.body;
-//     const {currentProduct} = await createProduct(product);
-//     console.log(req.body);
-//     res.json({ success: true, product: product });
-//   } catch (err) {
-//     res.json({ success: false, error: err.message });
-//   }
-// });
+    if (response.success) {
+      res.json({
+        success: true,
+        message: "Order placed successfully",
+        product: order,
+      });
+    } else {
+      res.json({ success: false, error: "Order failed" });
+    }
+  } catch (error) {
+    res.json({ success: false, error: error.message });
+  }
+});
+
+app.patch("/api/v1/approve-order/:orderId", async (req, res) => {
+  try {
+    const orderId = req.params.orderId;
+    const order = await approveOrder(orderId);
+    res.json(order);
+  } catch (error) {
+    res.json({ success: false, error: error.message });
+  }
+});

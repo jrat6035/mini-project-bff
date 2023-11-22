@@ -1,31 +1,36 @@
 const axios = require("axios");
 const { API_ROUTE_PATHS } = require("../constants/routes");
 
-function createUser(user) {
-    return axios
-      .post(API_ROUTE_PATHS.USERS_BASE_URL, user)
-      .then((response) => {
-        return response.data;
-      })
-      .catch((error) => {
-        console.error("Error in Creating User: ", error);
-        throw error;
-      });
-  }
+async function localSignUp(user) {
+  const response = await fetch(`${API_ROUTE_PATHS.USERS_BASE_URL}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(user),
+  });
 
-  function getUserById(userId) {
-    return axios
-      .get(`${API_ROUTE_PATHS.USERS_BASE_URL}/${userId}`)
-      .then((response) => {
-        return response.data;
-      })
-      .catch((error) => {
-        console.error("Error in Retrieving a User by ID: ", error);
-        throw error;
-      });
+  const result = await response.json();
+  if (result.success) {
+    return result;
+  } else {
+    throw new Error("Failed to create user in local db");
   }
+}
 
-  module.exports = {
-    createUser,
-    getUserById
+async function getUserByEmail(userEmail) {
+  const response = await fetch(
+    `${API_ROUTE_PATHS.USERS_BASE_URL}/${userEmail}`
+  );
+  const result = await response.json();
+  if (result.success) {
+    return result.data;
+  } else {
+    throw new Error("Could not fetch user");
   }
+}
+
+module.exports = {
+  localSignUp,
+  getUserByEmail,
+};

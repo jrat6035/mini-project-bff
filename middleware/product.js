@@ -1,64 +1,78 @@
-const axios = require("axios");
 const { API_ROUTE_PATHS } = require("../constants/routes");
 
-function getProducts(active) {
-  return axios
-    .get(`${API_ROUTE_PATHS.PRODUCTS_BASE_URL}?activeStatus=${active}`)
-    .then((response) => {
-      return response.data;
-    })
-    .catch((error) => {
-      console.error("Error in Retrieving: ", error);
-      throw error;
-    });
+async function createProduct(product) {
+  const response = await fetch(`${API_ROUTE_PATHS.PRODUCTS_BASE_URL}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(product),
+  });
+
+  const result = await response.json();
+  if (result.success) {
+    return result;
+  } else {
+    throw new Error("Failed to create product");
+  }
 }
 
-function createProduct(product) {
-  return axios
-    .post(API_ROUTE_PATHS.PRODUCTS_BASE_URL, product)
-    .then((response) => {
-      return response.data;
-    })
-    .catch((error) => {
-      console.error("Error in Creating Product: ", error);
-      throw error;
-    });
+async function getProducts() {
+  const response = await fetch(API_ROUTE_PATHS.PRODUCTS_BASE_URL);
+  const result = await response.json();
+  if (result.success) {
+    return result.data;
+  } else {
+    throw new Error("Could not fetch products");
+  }
 }
 
-function getProductById(productId) {
-  return axios
-    .get(`${API_ROUTE_PATHS.PRODUCTS_BASE_URL}/${productId}`)
-    .then((response) => {
-      return response.data;
-    })
-    .catch((error) => {
-      console.error("Error in Retrieving a product by ID: ", error);
-      throw error;
-    });
+async function getProductById(productId) {
+  const response = await fetch(
+    `${API_ROUTE_PATHS.PRODUCTS_BASE_URL}/${productId}`
+  );
+  const result = await response.json();
+  if (result.success) {
+    return result.data;
+  } else {
+    throw new Error("Could not fetch product");
+  }
 }
 
-function updateProductById(productId, product) {
-  return axios
-    .put(`${API_ROUTE_PATHS.PRODUCTS_BASE_URL}/${productId}`, product)
-    .then((response) => {
-      return response.data;
-    })
-    .catch((error) => {
-      console.error("Error in Updating a product by ID: ", error);
-      throw error;
-    });
+async function updateProductById(productId, product) {
+  const response = await fetch(
+    `${API_ROUTE_PATHS.PRODUCTS_BASE_URL}/${productId}`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(product),
+    }
+  );
+
+  const result = await response.json();
+  if (result.success) {
+    return result;
+  } else {
+    throw new Error("Failed to update product");
+  }
 }
 
-function removeProductById(productId) {
-  return axios
-    .delete(`${API_ROUTE_PATHS.PRODUCTS_BASE_URL}/${productId}`)
-    .then((response) => {
-      return response.data;
-    })
-    .catch((error) => {
-      console.error("Error in Removing a product by ID: ", error);
-      throw error;
-    });
+async function removeProductById(productId) {
+  const response = await fetch(
+    `${API_ROUTE_PATHS.PRODUCTS_BASE_URL}/${productId}`,
+    {
+      method: "DELETE",
+    }
+  );
+
+  const result = await response.json();
+  if (result.success) {
+    return result;
+  } else {
+    throw new Error("Failed to update product");
+  }
 }
 
 module.exports = {
